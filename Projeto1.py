@@ -1,16 +1,4 @@
-
-'''
-> 1: Item:
-        Receber Item(nome, código, qtd, preço e validade)
-        Salvar em arquivo separado
-        Função Ler Lista de Arquivos
-        Extrair Preços de Planilha
-> 2: Interface Gráfica:
-'''
-
 import sqlite3
-from unidecode import unidecode
-import re
 from openpyxl import load_workbook
 
 class baseDados:
@@ -19,16 +7,15 @@ class baseDados:
         self.cursor = self.connec.cursor()
         self.listaItens = []
 
-    def inserir(self, cod, nome, preco):
-        consulta = 'INSERT OR IGNORE INTO itens (cod, nome, preco) VALUES (?, ?, ?)'
-        self.cursor.execute(consulta, (cod, nome, preco))
+    def inserir(self, cod, nome, preco, qtd = None, val = None):
+        consulta = 'INSERT OR IGNORE INTO itens (cod, nome, preco, qtd, val) VALUES (?, ?, ?, ?, ?)'
+        self.cursor.execute(consulta, (cod, nome, preco, qtd, val))
         self.connec.commit()
 
-    def getItens(self):
+    def getItens(self,planilhaNova = False):
         wb = load_workbook(filename='tabela de preços 2021.xlsx', data_only=True)
         ws = wb.active
         row_count = int(ws.max_row)
-        listaItens = []
         for c in range(1, row_count + 1):
             numA = "A" + str(c)
             numB = "B" + str(c)
@@ -40,9 +27,10 @@ class baseDados:
             if isinstance(cellA, int):
                 item.append(cellA)
                 item.append(cellB)
-                item.append(str(cellC).replace('.', ','))
+                item.append(float(cellC))
                 self.listaItens.append(item)
-                # baseDados.inserir(self,cellA,cellB,cellC)
+                if planilhaNova:
+                    baseDados.inserir(self,cellA,cellB,cellC)
         for c in range(1, row_count + 1):
             numJ = "J" + str(c)
             numK = "K" + str(c)
@@ -54,39 +42,39 @@ class baseDados:
             if isinstance(cellJ, int):
                 item.append(cellJ)
                 item.append(cellK)
-                item.append(str(cellL).replace('.', ','))
+                item.append(float(cellL))
                 self.listaItens.append(item)
-                # baseDados.inserir(self,cellJ,cellK,cellL)
-        # for item in listaItens:
-        #     print(item)
+                if planilhaNova:
+                    baseDados.inserir(self,cellJ,cellK,cellL)
 
     def attBase(self):
         self.getItens()
         listaCod = []
+        listaPrc = []
         consulta = 'SELECT * FROM itens'
         self.cursor.execute(consulta)
         for l in self.cursor.fetchall():
             codigo, nome, preco, qtd, validade = l
             listaCod.append(codigo)
+            listaPrc.append(preco)
         for item in self.listaItens:
-            itemCod, itemNome, itemPreco = item
+            itemCod, itemNome, precoNovo = item
             if itemCod in listaCod:
-                update = 'UPDATE itens SET preco = ? WHERE cod = ?'
-                self.cursor.execute(update, (itemPreco, itemCod))
-                # print(f'Item {codigo} atualizado!')
+                indice = listaCod.index(itemCod)
+                precoAntigo = listaPrc[indice]
+                if str(precoAntigo) != str(precoNovo):
+                    update = 'UPDATE itens SET preco = ? WHERE cod = ?'
+                    self.cursor.execute(update, (precoNovo, itemCod))
+                    self.connec.commit()
+                    print(f'Preço do item "{itemCod}" atualizado de {precoAntigo} para {precoNovo}!')
             else:
-                self.inserir(itemCod, itemNome, itemPreco)
+                self.inserir(itemCod, itemNome, precoNovo)
                 print(f'Item {itemCod}: {itemNome} inserido na base de dados')
 
     def listar(self):
         self.cursor.execute('SELECT * FROM itens')
         for l in self.cursor.fetchall():
             print(l)
-
-    def inserirComData(self, cod, nome, preco, qtd, val):
-        consulta = 'INSERT INTO itens (cod, nome, preco, qtd, val) VALUES (?, ?, ?, ?, ?)'
-        self.cursor.execute(consulta, (cod, nome, preco, qtd, val))
-        self.connec.commit()
 
     def editVal(self,cod, qtd, val, op = ('+','-')):
         item = baseDados.getItemfromId(self, cod)
@@ -102,7 +90,7 @@ class baseDados:
             self.cursor.execute(update, (quantidade, cod, val))
             self.connec.commit()
         else:
-            baseDados.inserirComData(self, cod, item[1], item[2], qtd, val)
+            baseDados.inserir(self, cod, item[1], item[2], qtd, val)
             print(f'Data {val} inserida para o item "{cod}"')
 
     def qtdTotal(self,cod):
@@ -137,11 +125,12 @@ class baseDados:
             if codigo == cod:
                 item = l
         return item
-        # self.connec.commit()
 
     def fechar(self):
         self.connec.close()
         self.cursor.close()
+
+
 
 itens = baseDados('itensBaseDados.db')
 itens.attBase()
