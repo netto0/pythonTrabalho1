@@ -78,17 +78,25 @@ class baseDados:
 
     def editVal(self,cod, qtd, val, op = ('+','-')):
         item = baseDados.getItemfromId(self, cod)
+        print(item)
         if baseDados.verificar(self,cod,val) != None:
-            quantidade = None
+            qtdItem = item[3]
+            if qtdItem == None:
+                qtdItem = 0
             if op == '+':
-                quantidade = int(item[3]) + int(qtd)
+                quantidade = qtdItem + int(qtd)
             elif op == '-':
-                quantidade = int(item[3]) - int(qtd)
+                quantidade = qtdItem - int(qtd)
             print(baseDados.verificar(self, cod, val))
             print(f'Validade "{val}" já cadastrada, quantidade atualizada para {quantidade}')
-            update = 'UPDATE itens SET qtd = ? WHERE cod = ? AND val = ?'
-            self.cursor.execute(update, (quantidade, cod, val))
-            self.connec.commit()
+            if quantidade == 0:
+                update = 'UPDATE itens SET qtd = ?, val = ? WHERE cod = ? AND val = ?'
+                self.cursor.execute(update, (None, None, cod, val))
+                self.connec.commit()
+            else:
+                update = 'UPDATE itens SET qtd = ? WHERE cod = ? AND val = ?'
+                self.cursor.execute(update, (quantidade, cod, val))
+                self.connec.commit()
         else:
             baseDados.inserir(self, cod, item[1], item[2], qtd, val)
             print(f'Data {val} inserida para o item "{cod}"')
@@ -103,7 +111,10 @@ class baseDados:
             if codigo == cod:
                 item.append(l)
         for i in item:
-            soma += int(i[3])
+            if i[3] == None:
+                soma += 0
+            else:
+                soma += i[3]
         return soma
 
     def verificar(self,cod,val):
@@ -116,7 +127,7 @@ class baseDados:
                 item = l
         return item
 
-    def getItemfromId(self,cod):
+    def getItemfromId(self, cod):
         item = None
         consulta = 'SELECT * FROM itens'
         self.cursor.execute(consulta)
@@ -133,4 +144,6 @@ class baseDados:
 
 
 itens = baseDados('itensBaseDados.db')
-itens.attBase()
+# itens.attBase()
+# print(itens.qtdTotal(628))
+itens.editVal(628,2,'26/02/22','+')
