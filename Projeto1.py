@@ -17,6 +17,7 @@ class baseDados:
     def __init__(self, arquivo):
         self.connec = sqlite3.connect(arquivo)
         self.cursor = self.connec.cursor()
+        self.listaItens = []
 
     def inserir(self, cod, nome, preco):
         consulta = 'INSERT OR IGNORE INTO itens (cod, nome, preco) VALUES (?, ?, ?)'
@@ -27,6 +28,7 @@ class baseDados:
         wb = load_workbook(filename='tabela de preços 2021.xlsx', data_only=True)
         ws = wb.active
         row_count = int(ws.max_row)
+        listaItens = []
         for c in range(1, row_count + 1):
             numA = "A" + str(c)
             numB = "B" + str(c)
@@ -39,7 +41,8 @@ class baseDados:
                 item.append(cellA)
                 item.append(cellB)
                 item.append(str(cellC).replace('.', ','))
-                baseDados.inserir(self,cellA,cellB,cellC)
+                self.listaItens.append(item)
+                # baseDados.inserir(self,cellA,cellB,cellC)
         for c in range(1, row_count + 1):
             numJ = "J" + str(c)
             numK = "K" + str(c)
@@ -52,7 +55,28 @@ class baseDados:
                 item.append(cellJ)
                 item.append(cellK)
                 item.append(str(cellL).replace('.', ','))
-                baseDados.inserir(self,cellJ,cellK,cellL)
+                self.listaItens.append(item)
+                # baseDados.inserir(self,cellJ,cellK,cellL)
+        # for item in listaItens:
+        #     print(item)
+
+    def attBase(self):
+        self.getItens()
+        listaCod = []
+        consulta = 'SELECT * FROM itens'
+        self.cursor.execute(consulta)
+        for l in self.cursor.fetchall():
+            codigo, nome, preco, qtd, validade = l
+            listaCod.append(codigo)
+        for item in self.listaItens:
+            itemCod, itemNome, itemPreco = item
+            if itemCod in listaCod:
+                update = 'UPDATE itens SET preco = ? WHERE cod = ?'
+                self.cursor.execute(update, (itemPreco, itemCod))
+                # print(f'Item {codigo} atualizado!')
+            else:
+                self.inserir(itemCod, itemNome, itemPreco)
+                print(f'Item {itemCod}: {itemNome} inserido na base de dados')
 
     def listar(self):
         self.cursor.execute('SELECT * FROM itens')
@@ -115,10 +139,9 @@ class baseDados:
         return item
         # self.connec.commit()
 
-
     def fechar(self):
         self.connec.close()
         self.cursor.close()
 
-
 itens = baseDados('itensBaseDados.db')
+itens.attBase()
