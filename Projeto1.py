@@ -71,10 +71,17 @@ class baseDados:
                 self.inserir(itemCod, itemNome, precoNovo)
                 print(f'Item {itemCod}: {itemNome} inserido na base de dados')
 
-    def listar(self):
+    def listar(self,cod=None):
         self.cursor.execute('SELECT * FROM itens')
-        for l in self.cursor.fetchall():
-            print(l)
+        lista = self.cursor.fetchall()
+        if cod != None:
+            filtrado = []
+            for l in lista:
+                if cod in l:
+                    filtrado.append(l)
+            return filtrado
+        else:
+            return lista
 
     def editVal(self,cod, qtd, val, op = ('+','-')):
         item = baseDados.getItemfromId(self, cod)
@@ -101,6 +108,25 @@ class baseDados:
             baseDados.inserir(self, cod, item[1], item[2], qtd, val)
             print(f'Data {val} inserida para o item "{cod}"')
 
+    def removeItem(self,cod,val):
+        listar = self.listar(cod)
+        validadeItem = []
+        print(listar)
+        if len(listar) == 1:
+            print('O item não pode ser removido!')
+        elif len(listar) == 0:
+            print('O item não existe no estoque!')
+        elif len(listar) > 1:
+            for item in listar:
+                validadeItem.append(item[4])
+            print(f'O indice do item com essa validade é {validadeItem.index(val)}')
+            validadeItem.__delitem__(validadeItem.index(val))
+            print(f'Item com validade {val} deletado!')
+            print('Defina qual validade deve ser excluída')
+
+    def teste(self,cod):
+        var = 'SELECT COUNT(*) FROM "main"."itens" WHERE "cod" LIKE "cod"'
+        self.cursor.execute(var)
     def qtdTotal(self,cod):
         item = []
         soma = 0
@@ -146,4 +172,7 @@ class baseDados:
 itens = baseDados('itensBaseDados.db')
 # itens.attBase()
 # print(itens.qtdTotal(628))
-itens.editVal(628,2,'26/02/22','+')
+# itens.editVal(628,2,'26/02/22','+')
+# print(itens.listar())
+# itens.removeItem(628,'26/02/22')
+print(itens.teste(628))
